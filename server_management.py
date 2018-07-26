@@ -34,7 +34,7 @@ class ServerManagement:
     LIST = 'list'
 
     # Config file
-    CONFIG_FILE = os.path.dirname(os.path.realpath(__file__)) + '/config.yaml'
+    CONFIG_FILE = os.path.dirname(os.path.realpath(__file__)) + '/config_test.yaml'
 
     # Accepted commands
     ACCEPTED_COMMANDS = {

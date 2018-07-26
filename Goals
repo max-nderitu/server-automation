@@ -1,0 +1,39 @@
+Goal:
+----------------------
+    Automate logging into servers
+
+
+Current Task:
+----------------------
+
+
+
+Tasks:
+----------------------
+    Allow predefined aliases in the args Eg ./server_automation.py .29
+    Allow running custom commands in the args Eg ./server_automation.py .29 --command "ls -al"
+    Add list command on connect argument
+    Add the --command argument to run a command
+    Auto complete in typing the commands in cli
+    Check if a server is accesible
+    Add interact() option once some servers works in cli
+    Add network connection failure
+    Adding signal support for like Tab command inside a logged in server
+    Add instructions of running the application
+    Remove serverDisplayName from validating successfull account login
+    Add ability to run commands from the config file and add a cli tag to allow running the 
+	    command and some warning on the cli when running commands
+    Add colors on the tool output
+    Research SSH Keys
+    Restart sessions once timeout
+    Maintain the session
+    Add bottom bar for easy switching between servers
+    Resize window for all server logins
+    Use SSH Keys
+	
+DONE
+----------------------
+    Check if all required modules have been installed
+    Check if the command is being executed by python2
+    Remove u'' from the string being presented to the user
+    Add timeout option in cli

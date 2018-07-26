@@ -1,0 +1,9 @@
+---
+servers:
+- aliases:
+  - rebex
+  - test.rebex.net
+  server: test.rebex.net
+  username: demo
+  password: password
+  port: 22

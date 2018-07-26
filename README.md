@@ -15,7 +15,7 @@ A utility application that helps in logging into ssh servers. It automates the p
 The first step is to navigate into the folder you wish to clone the project into. 
 Clone the project into the folder using the command below:
 ```sh
-$ git clone https://github.com/MaxNdesh/server-automation.git
+$ git clone https://github.com/max-nderitu/server-automation.git
 ```
 
 Install the python modules required by the project

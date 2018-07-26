@@ -34,7 +34,7 @@ class ServerManagement:
     LIST = 'list'
 
     # Config file
-    CONFIG_FILE = os.path.dirname(os.path.realpath(__file__)) + '/config_test.yaml'
+    CONFIG_FILE = os.path.dirname(os.path.realpath(__file__)) + '/config.yaml'
 
     # Accepted commands
     ACCEPTED_COMMANDS = {
@@ -63,6 +63,9 @@ class ServerManagement:
         },
     }
 
+    # The controller object
+    controller = None
+
     def log(self, result, other=None):
         """Logging the results into the console"""
         if other is None:
@@ -70,26 +73,26 @@ class ServerManagement:
         else:
             print(result, other)
 
-    def expected(self, child, expected_string):
+    def expected(self, expected_string):
         """Function to handle the expected output"""
 
         # Check if the string passed is the expected string
         try:
-            child.expect(expected_string, timeout=self.APP_TIMEOUT)
+            self.controller.expect(expected_string, timeout=self.APP_TIMEOUT)
         except pexpect.EOF:
             self.log("EOF, Failed to match expected string: ", expected_string)
-            self.log("\t----> After: ", child.after)
+            self.log("\t----> After: ", self.controller.after)
             sys.exit(1)
         except pexpect.TIMEOUT:
             self.log("TIMEOUT, Failed to match expected string: ", expected_string)
-            self.log("\t----> After: ", child.after)
+            self.log("\t----> After: ", self.controller.after)
             sys.exit(1)
         except:
             self.log("Failed to match expected string: ", expected_string)
-            self.log("\t----> After: ", child.after)
+            self.log("\t----> After: ", self.controller.after)
             sys.exit(1)
 
-    def ssh_log_in(self, server_ip, username, password, port=22, app_controller=None):
+    def ssh_log_in(self, server_ip, username, password, port=22):
         """
         This function logs in into a server with the arguments passed
         """
@@ -101,34 +104,30 @@ class ServerManagement:
         self.log("----> Logging in with the command: %s" % command)
 
         # Run the command
-        if app_controller is None:
-            app_controller = pexpect.spawn(command)
+        if self.controller is None:
+            self.controller = pexpect.spawn(command)
         else:
-            app_controller.sendline(command)
+            self.controller.sendline(command)
 
         # Expect the password
-        self.expected(app_controller, 'assword:')
+        self.expected('assword:')
 
         # Insert the password
-        app_controller.sendline(password)
+        self.controller.sendline(password)
 
         # Expect the username and server display name
-        self.expected(app_controller, ['%s@' % username, 'bash'])
+        self.expected(['%s@' % username, 'bash'])
 
         self.log("<---- Successfully logged into the server: " + server_ip + "\n")
 
-        return app_controller
-
     # Function to run command on the server
-    def run_command(self, app_controller, command, expected_string=".*"):
+    def run_command(self, command, expected_string=".*"):
         self.log("\nRunning the command %s" % command)
 
-        app_controller.sendline(command)
+        self.controller.sendline(command)
 
         # Check if the string passed is the expected string
-        self.expected(app_controller, expected_string)
-
-        return app_controller
+        self.expected(expected_string)
 
     def get_server_details(self, server_alias):
         """
@@ -164,26 +163,23 @@ class ServerManagement:
     def sigwinch_pass_through(self, sig, data):
         s = struct.pack("HHHH", 0, 0, 0, 0)
         a = struct.unpack('hhhh', fcntl.ioctl(sys.stdout.fileno(), termios.TIOCGWINSZ, s))
-        global controller
-        controller.setwinsize(a[0], a[1])
+        # global controller
+        self.controller.setwinsize(a[0], a[1])
 
-    def server_login(self, server_details, app_controller=None):
+    def server_login(self, server_details):
         """
         Logs into the server specified and any required servers
         """
         if 'requiredServerLogIn' in server_details:
             # Connect to the server
-            app_controller = self.server_login(self.get_server_details(
-                server_details['requiredServerLogIn']), app_controller)
+            self.server_login(self.get_server_details(
+                server_details['requiredServerLogIn']))
 
         # Connect to the server
-        app_controller = self.ssh_log_in(server_details['server'],
-                                         server_details['username'],
-                                         server_details['password'],
-                                         server_details['port'],
-                                         app_controller)
-
-        return app_controller
+        self.ssh_log_in(server_details['server'],
+                        server_details['username'],
+                        server_details['password'],
+                        server_details['port'],)
 
     def handle_connect_options(self, passed_options):
         """

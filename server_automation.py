@@ -80,19 +80,19 @@ if __name__ == '__main__':
         alias = other_args[0]
         details = automation.get_server_details(alias)
 
-        controller = automation.server_login(details)
+        automation.server_login(details)
 
         # Run command if any
         if COMMAND_TO_RUN:
-            controller.sendline(COMMAND_TO_RUN)
+            automation.controller.sendline(COMMAND_TO_RUN)
 
         # Get the window size and update the app controller
         column, row = shutil.get_terminal_size((80, 20))
-        controller.setwinsize(row, column)
+        automation.controller.setwinsize(row, column)
 
         # Notify incase of a window size change
         signal.signal(signal.SIGWINCH, automation.sigwinch_pass_through)
-        controller.interact()
+        automation.controller.interact()
     elif first_arg == automation.LIST:
         # Get the list of all aliases
         all_aliases = []

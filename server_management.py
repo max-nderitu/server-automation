@@ -28,13 +28,14 @@ class ServerManagement:
     DELIMITER = "<------->"
     ARGS_PREFIX = "--"
     APP_TIMEOUT = 10
+    COMMAND_TO_RUN = None
 
     # Commands that will be used through the command line
     CONNECT = 'connect'
     LIST = 'list'
 
     # Config file
-    CONFIG_FILE = os.path.dirname(os.path.realpath(__file__)) + '/config_test.yaml'
+    CONFIG_FILE = os.path.dirname(os.path.realpath(__file__)) + '/config.yaml'
 
     # Accepted commands
     ACCEPTED_COMMANDS = {
@@ -189,11 +190,9 @@ class ServerManagement:
         """
         for passed_option in passed_options:
             if passed_option['name'] == 'timeout':
-                global APP_TIMEOUT
-                APP_TIMEOUT = passed_option['value']
+                self.APP_TIMEOUT = passed_option['value']
             elif passed_option['name'] == 'command':
-                global COMMAND_TO_RUN
-                COMMAND_TO_RUN = passed_option['value']
+                self.COMMAND_TO_RUN = passed_option['value']
 
     def validate_arguments(self, options, available_options):
         """

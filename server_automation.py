@@ -7,8 +7,6 @@ import yaml
 from server_management import ServerManagement
 
 if __name__ == '__main__':
-    COMMAND_TO_RUN = None
-
     automation = ServerManagement()
 
     # Get the arguments passed
@@ -83,8 +81,8 @@ if __name__ == '__main__':
         automation.server_login(details)
 
         # Run command if any
-        if COMMAND_TO_RUN:
-            automation.controller.sendline(COMMAND_TO_RUN)
+        if automation.COMMAND_TO_RUN:
+            automation.controller.sendline(automation.COMMAND_TO_RUN)
 
         # Get the window size and update the app controller
         column, row = shutil.get_terminal_size((80, 20))

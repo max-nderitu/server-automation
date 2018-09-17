@@ -109,7 +109,7 @@ if __name__ == '__main__':
                 "server": item['server'],
                 "aliases": item['aliases']})
 
-            automation.log("The list of aliases/servers are: \n")
+        automation.log("The list of aliases/servers are: \n")
 
         for item in all_aliases:
             automation.log("Aliases: {aliases}, \tSERVER: {server}"

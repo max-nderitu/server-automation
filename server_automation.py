@@ -116,6 +116,40 @@ if __name__ == '__main__':
                            .format(server=item['server'], aliases=", ".join(item['aliases'])))
 
         sys.exit(0)
+    elif first_arg == automation.PORT_FORWARD:
+        # Check if the alias was passed as an argument
+        try:
+            assert type(other_args[0]) is str
+            assert type(other_args[1]) is str
+
+            items = other_args[1].split(':')
+
+            automation.log("The items are:", items)
+        except:
+            automation.log("No alias was passed, please pass an alias. "
+                           "Format \"./server_automation.py pf local_port alias_name:port\"")
+            sys.exit(1)
+
+        local_port = other_args[0]
+
+        alias = items[0]
+        destination_port = items[1]
+
+        details = automation.get_server_details(alias)
+
+        automation.server_port_forward(details, local_port, destination_port)
+
+        # Run command if any
+        if automation.COMMAND_TO_RUN:
+            automation.controller.sendline(automation.COMMAND_TO_RUN)
+
+        # Get the window size and update the app controller
+        column, row = shutil.get_terminal_size((80, 20))
+        automation.controller.setwinsize(row, column)
+
+        # Notify incase of a window size change
+        signal.signal(signal.SIGWINCH, automation.sigwinch_pass_through)
+        automation.controller.interact()
     else:
         automation.log('Unimplemented command {command} {accepted_commands}'.format(
             command=first_arg,

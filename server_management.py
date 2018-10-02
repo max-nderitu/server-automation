@@ -29,10 +29,12 @@ class ServerManagement:
     ARGS_PREFIX = "--"
     APP_TIMEOUT = 10
     COMMAND_TO_RUN = None
+    FINAL_SERVER_DETAILS = None
 
     # Commands that will be used through the command line
     CONNECT = 'connect'
     LIST = 'list'
+    PORT_FORWARD = 'pf'
 
     # Config file
     CONFIG_FILE = os.path.dirname(os.path.realpath(__file__)) + '/config.yaml'
@@ -59,6 +61,15 @@ class ServerManagement:
                   the server that you have configured.
 
                   Example ./server_automation list
+                  """,
+            "options": []
+        },
+        PORT_FORWARD: {
+            "desc": """
+                  Creates a port forwarding from the server specified.
+                  Format: ./server_automation pf local_port destination_alias:port  
+
+                  Example ./server_automation pf 1400 rebex:80
                   """,
             "options": []
         },
@@ -121,6 +132,34 @@ class ServerManagement:
 
         self.log("<---- Successfully logged into the server: " + server_ip + "\n")
 
+    def ssh_port_forward(self, server_ip, username, password, port, local_port, destination_port):
+        """
+        This function logs in into a server with the arguments passed and port forwards
+        """
+
+        # Spawn a ssh session
+        command = f"ssh -p{port} -L localhost:{local_port}:localhost:{destination_port} {username}@{server_ip}"
+
+        # Log
+        self.log("----> Port forwarding with the command: %s" % command)
+
+        # Run the command
+        if self.controller is None:
+            self.controller = pexpect.spawn(command)
+        else:
+            self.controller.sendline(command)
+
+        # Expect the password
+        self.expected('assword:')
+
+        # Insert the password
+        self.controller.sendline(password)
+
+        # Expect the username and server display name
+        self.expected(['%s@' % username, 'bash'])
+
+        self.log("<---- Successfully port forwarded to the server: " + server_ip + "\n")
+
     # Function to run command on the server
     def run_command(self, command, expected_string=".*"):
         self.log("\nRunning the command %s" % command)
@@ -180,7 +219,36 @@ class ServerManagement:
         self.ssh_log_in(server_details['server'],
                         server_details['username'],
                         server_details['password'],
-                        server_details['port'],)
+                        server_details['port'])
+
+    def server_port_forward(self, server_details, local_port, destination_port):
+        """
+        Logs into the server specified and any required servers and creates a port forwarding connection
+        """
+        if self.FINAL_SERVER_DETAILS is None:
+            server_details['destination_port'] = destination_port
+
+            self.FINAL_SERVER_DETAILS = server_details
+
+        if 'requiredServerLogIn' in server_details:
+            # Connect to the server
+            self.server_port_forward(self.get_server_details(
+                server_details['requiredServerLogIn']), local_port, destination_port)
+
+        # Get the local and destination ports
+        local_port = local_port
+        destination_port = local_port
+
+        if self.FINAL_SERVER_DETAILS['server'] == server_details['server']:
+            destination_port = self.FINAL_SERVER_DETAILS['destination_port']
+
+        # Connect to the server
+        self.ssh_port_forward(server_details['server'],
+                              server_details['username'],
+                              server_details['password'],
+                              server_details['port'],
+                              local_port,
+                              destination_port)
 
     def handle_connect_options(self, passed_options):
         """

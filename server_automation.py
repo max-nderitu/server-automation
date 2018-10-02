@@ -123,8 +123,6 @@ if __name__ == '__main__':
             assert type(other_args[1]) is str
 
             items = other_args[1].split(':')
-
-            automation.log("The items are:", items)
         except:
             automation.log("No alias was passed, please pass an alias. "
                            "Format \"./server_automation.py pf local_port alias_name:port\"")

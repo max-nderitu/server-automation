@@ -112,8 +112,9 @@ if __name__ == '__main__':
         automation.log("The list of aliases/servers are: \n")
 
         for item in all_aliases:
+            aliases = [str(alias) for alias in item['aliases']]
             automation.log("Aliases: {aliases}, \tSERVER: {server}"
-                           .format(server=item['server'], aliases=", ".join(item['aliases'])))
+                           .format(server=item['server'], aliases=", ".join(aliases)))
 
         sys.exit(0)
     elif first_arg == automation.PORT_FORWARD:

@@ -3,7 +3,7 @@
 A utility application that helps in logging into ssh servers. It automates the process of logging into these servers without the constant need of remembering passwords.
 
 ## Disclaimer
-- The current version only works with linux and has not been tested on mac os yet. Windows is not currently supported.
+- The current version works with linux and mac os. Windows is not currently supported.
 - Only python3 is supported at this time.
 
 ### Current available features are:

@@ -181,7 +181,7 @@ class ServerManagement:
         server = None
 
         with open(self.CONFIG_FILE, 'r') as file:
-            config = yaml.load(file)
+            config = yaml.safe_load(file)
 
         # Get the username and password
         for server_item in config['servers']:

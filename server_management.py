@@ -229,7 +229,12 @@ class ServerManagement:
             # Connect to the server
             self.server_login(self.get_server_details(server_details['requiredServerLogIn']))
 
-        if server_details['requireVerificationCode'] and self.VERIFICATION_CODE is None:
+        if 'requireVerificationCode' in server_details and server_details['requireVerificationCode']:
+            require_verification_code = True
+        else:
+            require_verification_code = False
+
+        if require_verification_code and self.VERIFICATION_CODE is None:
             self.log("Please pass a verification code for server: %s" % server_details['server'])
             sys.exit(1)
 
@@ -238,7 +243,7 @@ class ServerManagement:
                         server_details['username'],
                         server_details['password'],
                         server_details['port'],
-                        server_details['requireVerificationCode'])
+                        require_verification_code)
 
     def server_port_forward(self, server_details, local_port, destination_port):
         """

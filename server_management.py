@@ -28,6 +28,8 @@ class ServerManagement:
     DELIMITER = "<------->"
     ARGS_PREFIX = "--"
     APP_TIMEOUT = 10
+    VERIFICATION_CODE = None
+    VERIFICATION_CODE_MESSAGE = 'Verification code'
     COMMAND_TO_RUN = None
     FINAL_SERVER_DETAILS = None
 
@@ -37,7 +39,8 @@ class ServerManagement:
     PORT_FORWARD = 'pf'
 
     # Config file
-    CONFIG_FILE = os.path.dirname(os.path.realpath(__file__)) + '/config.yaml'
+    # CONFIG_FILE = os.path.dirname(os.path.realpath(__file__)) + '/config.yaml'
+    CONFIG_FILE = '/home/mnderitu/.config/server_automation/config.yaml'
 
     # Accepted commands
     ACCEPTED_COMMANDS = {
@@ -50,10 +53,12 @@ class ServerManagement:
                               will try reaching the server before timing out.
 
                   --command - Specifies the command you want to run on the server
+                  
+                  --verification-code - Passes the verification code for servers that require one
 
                   Example ./server_automation connect saved_alias
                   """,
-            "options": ['timeout', 'test', 'command']
+            "options": ['timeout', 'test', 'command', 'verification-code']
         },
         LIST: {
             "desc": """
@@ -91,9 +96,11 @@ class ServerManagement:
         # Check if the string passed is the expected string
         try:
             self.controller.expect(expected_string, timeout=self.APP_TIMEOUT)
+
         except pexpect.EOF:
             self.log("EOF, Failed to match expected string: ", expected_string)
             self.log("\t----> After: ", self.controller.after)
+            self.controller.kill(1)
             sys.exit(1)
         except pexpect.TIMEOUT:
             self.log("TIMEOUT, Failed to match expected string: ", expected_string)
@@ -104,7 +111,7 @@ class ServerManagement:
             self.log("\t----> After: ", self.controller.after)
             sys.exit(1)
 
-    def ssh_log_in(self, server_ip, username, password, port=22):
+    def ssh_log_in(self, server_ip, username, password, port=22, require_verification_code=False):
         """
         This function logs in into a server with the arguments passed
         """
@@ -127,8 +134,16 @@ class ServerManagement:
         # Insert the password
         self.controller.sendline(password)
 
+        # Check if the server requires a verification code
+        if require_verification_code:
+            self.expected(self.VERIFICATION_CODE_MESSAGE)
+
+            self.log("Providing verification code: %s" % self.VERIFICATION_CODE)
+
+            self.controller.sendline(self.VERIFICATION_CODE)
+
         # Expect the username and server display name
-        self.expected(['%s@' % username, 'bash'])
+        self.expected(['%s@' % username, '%s:' % username, 'bash'])
 
         self.log("<---- Successfully logged into the server: " + server_ip + "\n")
 
@@ -212,14 +227,18 @@ class ServerManagement:
         """
         if 'requiredServerLogIn' in server_details:
             # Connect to the server
-            self.server_login(self.get_server_details(
-                server_details['requiredServerLogIn']))
+            self.server_login(self.get_server_details(server_details['requiredServerLogIn']))
+
+        if server_details['requireVerificationCode'] and self.VERIFICATION_CODE is None:
+            self.log("Please pass a verification code for server: %s" % server_details['server'])
+            sys.exit(1)
 
         # Connect to the server
         self.ssh_log_in(server_details['server'],
                         server_details['username'],
                         server_details['password'],
-                        server_details['port'])
+                        server_details['port'],
+                        server_details['requireVerificationCode'])
 
     def server_port_forward(self, server_details, local_port, destination_port):
         """
@@ -261,10 +280,13 @@ class ServerManagement:
                 self.APP_TIMEOUT = passed_option['value']
             elif passed_option['name'] == 'command':
                 self.COMMAND_TO_RUN = passed_option['value']
+            elif passed_option['name'] == 'verification-code':
+                self.VERIFICATION_CODE = passed_option['value']
 
     def validate_arguments(self, options, available_options):
         """
         Performs the operations needed for the connect option
+        :param available_options:
         :param options:
         :return:
         """

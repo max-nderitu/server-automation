@@ -153,7 +153,7 @@ class ServerManagement:
         """
 
         # Spawn a ssh session
-        command = f"ssh -p{port} -L localhost:{local_port}:localhost:{destination_port} {username}@{server_ip}"
+        command = "ssh -p{port} -L localhost:{local_port}:localhost:{destination_port} {username}@{server_ip}"
 
         # Log
         self.log("----> Port forwarding with the command: %s" % command)

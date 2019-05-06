@@ -26,7 +26,8 @@ class ServerManagement:
     # Define the constant to hold the special string that will be used as
     # the delimiter when splitting the arguments from the command line
     DELIMITER = "<------->"
-    ARGS_PREFIX = "--"
+    ARGS_LONG_PREFIX = "--"
+    ARGS_SHORT_PREFIX = "-"
     APP_TIMEOUT = 10
     VERIFICATION_CODE = None
     VERIFICATION_CODE_MESSAGE = 'Verification code'
@@ -54,11 +55,16 @@ class ServerManagement:
 
                   --command - Specifies the command you want to run on the server
                   
-                  --verification-code - Passes the verification code for servers that require one
+                  --verification-code, -vc - Passes the verification code for servers that require one
 
                   Example ./server_automation connect saved_alias
                   """,
-            "options": ['timeout', 'test', 'command', 'verification-code']
+            "options": [
+                {'logForm': 'timeout'},
+                {'longForm': 'test'},
+                {'longForm': 'command'},
+                {'longForm': 'verification-code', 'shortForm': 'v'}
+            ]
         },
         LIST: {
             "desc": """
@@ -83,7 +89,8 @@ class ServerManagement:
     # The controller object
     controller = None
 
-    def log(self, result, other=None):
+    @staticmethod
+    def log(result, other=None):
         """Logging the results into the console"""
         if other is None:
             print(result)
@@ -153,7 +160,7 @@ class ServerManagement:
         """
 
         # Spawn a ssh session
-        command = "ssh -p{port} -L localhost:{local_port}:localhost:{destination_port} {username}@{server_ip}"
+        command = f"ssh -p{port} -L localhost:{local_port}:localhost:{destination_port} {username}@{server_ip}"
 
         # Log
         self.log("----> Port forwarding with the command: %s" % command)
@@ -285,7 +292,7 @@ class ServerManagement:
                 self.APP_TIMEOUT = passed_option['value']
             elif passed_option['name'] == 'command':
                 self.COMMAND_TO_RUN = passed_option['value']
-            elif passed_option['name'] == 'verification-code':
+            elif passed_option['name'] == 'verification-code' or passed_option['name'] == 'v':
                 self.VERIFICATION_CODE = passed_option['value']
 
     def validate_arguments(self, options, available_options):
@@ -305,8 +312,8 @@ class ServerManagement:
             except ValueError:
                 self.log('Undefined value for option: {prefix}{option},'
                          ' Use the format: {prefix}{option}=value'
-                         .format(prefix=self.ARGS_PREFIX, option=option))
+                         .format(prefix=self.ARGS_LONG_PREFIX, option=option))
                 sys.exit(1)
             except AssertionError:
-                self.log('Unknown option: {}{}'.format(self.ARGS_PREFIX, option))
+                self.log('Unknown option: {}{}'.format(self.ARGS_LONG_PREFIX, option))
                 sys.exit(1)

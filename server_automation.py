@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import re
 import sys
 import shutil
 import signal
@@ -24,11 +25,16 @@ if __name__ == '__main__':
     first_arg = args[0]
 
     # Get the options and arguments passed
-    # Options have -- prefix
-    options = list(map(lambda x: x.strip(automation.ARGS_PREFIX),
-                       list(filter(lambda x: x.startswith(automation.ARGS_PREFIX), args[1:]))))
+    # Options have -- prefix and - prefix
+    long_options = list(map(lambda x: x.strip(automation.ARGS_LONG_PREFIX),
+                            list(filter(lambda x: re.match(automation.ARGS_LONG_PREFIX + '[a-z]', x), args[1:]))))
+    short_options = list(map(lambda x: x.strip(automation.ARGS_SHORT_PREFIX),
+                             list(filter(lambda x: re.match(automation.ARGS_SHORT_PREFIX + '[a-z]', x), args[1:]))))
 
-    other_args = list(filter(lambda x: not x.startswith(automation.ARGS_PREFIX), args[1:]))
+    # Arguments that dont have -- or - prefix mainly such as the server name
+    other_args = list(filter(lambda x:
+                             not x.startswith(automation.ARGS_LONG_PREFIX) or not x.startswith(
+                                 automation.ARGS_LONG_PREFIX), args[1:]))
 
     # Check if the fist argument is a supported command
     if first_arg not in automation.ACCEPTED_COMMANDS.keys():
@@ -39,12 +45,25 @@ if __name__ == '__main__':
 
     elif first_arg == automation.CONNECT:
         # Verify if the options passed exists
-        available_options = automation.ACCEPTED_COMMANDS[automation.CONNECT]['options']
+        available_options = [option['longForm']
+                             for option in automation.ACCEPTED_COMMANDS[automation.CONNECT]['options']
+                             if 'longForm' in option]
+
+        available_options += [option['shortForm']
+                              for option in automation.ACCEPTED_COMMANDS[automation.CONNECT]['options']
+                              if 'shortForm' in option]
 
         # Handle the options
-        for option in options:
+        all_options = long_options + short_options
+        for option in all_options:
+            is_short_prefix = False
+
             try:
-                option_name, option_value = option.split("=")
+                if '=' in option:
+                    option_name, option_value = option.split("=")
+                else:
+                    option_name, option_value = option[0], option[1:]
+                    is_short_prefix = True
 
                 assert option_name in available_options
                 assert type(option_name) is str
@@ -52,17 +71,24 @@ if __name__ == '__main__':
                 if len(option_value) < 1:
                     raise ValueError()
             except ValueError:
-                automation.log('Undefined value for option: {prefix}{option},'
-                               ' Use the format: {prefix}{option}=value'
-                               .format(prefix=automation.ARGS_PREFIX, option=option))
+                if is_short_prefix:
+                    automation.log('Undefined value for option: {prefix}{option},'
+                                   ' Use the format: {prefix}{option}value'
+                                   .format(prefix=automation.ARGS_SHORT_PREFIX, option=option))
+                else:
+                    automation.log('Undefined value for option: {prefix}{option},'
+                                   ' Use the format: {prefix}{option}=value'
+                                   .format(prefix=automation.ARGS_LONG_PREFIX, option=option))
+
                 sys.exit(1)
             except AssertionError:
-                automation.log('Unknown option: {}{}'.format(automation.ARGS_PREFIX, option))
+                automation.log('Unknown option: {}{}'.format(automation.ARGS_LONG_PREFIX, option))
                 sys.exit(1)
 
         # Separate the key and values
         # Create a list of dictionaries with the keys: name and value
-        options = list(map(lambda x: dict(zip(['name', 'value'], x.split("="))), options))
+        options = list(map(lambda x: dict(zip(['name', 'value'], x.split("="))), long_options))
+        options += list(map(lambda x: dict(zip(['name', 'value'], [x[0], x[1:]])), short_options))
 
         # Handle all the options
         automation.handle_connect_options(options)

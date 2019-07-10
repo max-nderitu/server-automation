@@ -160,6 +160,9 @@ if __name__ == '__main__':
         alias = items[0]
         destination_port = items[1]
 
+        # Handle all the options
+        automation.handle_port_forward_options(short_options, long_options)
+
         details = automation.get_server_details(alias)
 
         automation.server_port_forward(details, local_port, destination_port)

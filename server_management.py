@@ -28,7 +28,7 @@ class ServerManagement:
     DELIMITER = "<------->"
     ARGS_LONG_PREFIX = "--"
     ARGS_SHORT_PREFIX = "-"
-    APP_TIMEOUT = 10
+    APP_TIMEOUT = 8
     VERIFICATION_CODE = None
     VERIFICATION_CODE_MESSAGE = 'Verification code'
     COMMAND_TO_RUN = None
@@ -106,16 +106,22 @@ class ServerManagement:
 
         except pexpect.EOF:
             self.log("EOF, Failed to match expected string: ", expected_string)
-            self.log("\t----> After: ", self.controller.after)
+            self.log("\t----> Expected: ", expected_string)
+            self.log("\t----> Received: ", self.controller.before)
+            self.log("\t----> Error: ", self.controller.after)
             self.controller.kill(1)
             sys.exit(1)
         except pexpect.TIMEOUT:
             self.log("TIMEOUT, Failed to match expected string: ", expected_string)
-            self.log("\t----> After: ", self.controller.after)
+            self.log("\t----> Expected: ", expected_string)
+            self.log("\t----> Received: ", self.controller.before)
+            self.log("\t----> Error: ", self.controller.after)
             sys.exit(1)
         except:
             self.log("Failed to match expected string: ", expected_string)
-            self.log("\t----> After: ", self.controller.after)
+            self.log("\t----> Expected: ", expected_string)
+            self.log("\t----> Received: ", self.controller.before)
+            self.log("\t----> Error: ", self.controller.after)
             sys.exit(1)
 
     def ssh_log_in(self, server_ip, username, password, port=22, require_verification_code=False):
@@ -154,7 +160,8 @@ class ServerManagement:
 
         self.log("<---- Successfully logged into the server: " + server_ip + "\n")
 
-    def ssh_port_forward(self, server_ip, username, password, port, local_port, destination_port):
+    def ssh_port_forward(self, server_ip, username, password, port, local_port,
+                         destination_port, require_verification_code):
         """
         This function logs in into a server with the arguments passed and port forwards
         """
@@ -176,6 +183,14 @@ class ServerManagement:
 
         # Insert the password
         self.controller.sendline(password)
+
+        # Check if the server requires a verification code
+        if require_verification_code:
+            self.expected(self.VERIFICATION_CODE_MESSAGE)
+
+            self.log("Providing verification code: %s" % self.VERIFICATION_CODE)
+
+            self.controller.sendline(self.VERIFICATION_CODE)
 
         # Expect the username and server display name
         self.expected(['%s@' % username, 'bash'])
@@ -256,6 +271,8 @@ class ServerManagement:
         """
         Logs into the server specified and any required servers and creates a port forwarding connection
         """
+        require_verification_code = False
+
         if self.FINAL_SERVER_DETAILS is None:
             server_details['destination_port'] = destination_port
 
@@ -273,13 +290,17 @@ class ServerManagement:
         if self.FINAL_SERVER_DETAILS['server'] == server_details['server']:
             destination_port = self.FINAL_SERVER_DETAILS['destination_port']
 
+        if 'requireVerificationCode' in server_details and server_details['requireVerificationCode']:
+            require_verification_code = True
+
         # Connect to the server
         self.ssh_port_forward(server_details['server'],
                               server_details['username'],
                               server_details['password'],
                               server_details['port'],
                               local_port,
-                              destination_port)
+                              destination_port,
+                              require_verification_code)
 
     def handle_connect_options(self, passed_options):
         """
@@ -288,6 +309,24 @@ class ServerManagement:
         :return:
         """
         for passed_option in passed_options:
+            if passed_option['name'] == 'timeout':
+                self.APP_TIMEOUT = passed_option['value']
+            elif passed_option['name'] == 'command':
+                self.COMMAND_TO_RUN = passed_option['value']
+            elif passed_option['name'] == 'verification-code' or passed_option['name'] == 'v':
+                self.VERIFICATION_CODE = passed_option['value']
+
+    def handle_port_forward_options(self, short_options, long_options):
+        """
+        Performs the operations needed for the connect option
+        :param short_options:
+        :param passed_options:
+        :return:
+        """
+        options = list(map(lambda x: dict(zip(['name', 'value'], x.split("="))), long_options))
+        options += list(map(lambda x: dict(zip(['name', 'value'], [x[0], x[1:]])), short_options))
+
+        for passed_option in options:
             if passed_option['name'] == 'timeout':
                 self.APP_TIMEOUT = passed_option['value']
             elif passed_option['name'] == 'command':

@@ -17,7 +17,7 @@ if __name__ == '__main__':
         assert len(args) >= 1
     except AssertionError:
         automation.log('Supported commands are: \n{}'.format("\n".join(
-            ["{0}: {1}".format(key, value['desc']) for key, value in automation.ACCEPTED_COMMANDS.items()])))
+            ["🔥 {0}: {1}".format(key, value['desc']) for key, value in automation.ACCEPTED_COMMANDS.items()])))
 
         sys.exit(1)
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
                 sys.exit(1)
             except AssertionError:
-                automation.log('Unknown option: {}{}'.format(automation.ARGS_LONG_PREFIX, option))
+                automation.log('🧊 Unknown option: {}{}'.format(automation.ARGS_LONG_PREFIX, option))
                 sys.exit(1)
 
         # Separate the key and values
@@ -97,12 +97,16 @@ if __name__ == '__main__':
         try:
             assert type(other_args[0]) is str
         except:
-            automation.log("No alias was passed, please pass an alias. "
+            automation.log("🧊 No alias was passed, please pass an alias. "
                            "Format \"./server_automation.py connect alias_name\"")
             sys.exit(1)
 
         alias = other_args[0]
         details = automation.get_server_details(alias)
+
+        # Set the verification code if its passed
+        if other_args[1]:
+            automation.VERIFICATION_CODE = other_args[1]
 
         automation.server_login(details)
 
@@ -127,7 +131,7 @@ if __name__ == '__main__':
             try:
                 assert len(args) >= 1
             except AssertionError:
-                automation.log('Config file:{config} does not exist or is empty.'
+                automation.log('🧊 Config file:{config} does not exist or is empty.'
                                .format(config=automation.CONFIG_FILE))
 
         for item in data['servers']:
@@ -135,11 +139,11 @@ if __name__ == '__main__':
                 "server": item['server'],
                 "aliases": item['aliases']})
 
-        automation.log("The list of aliases/servers are: \n")
+        automation.log("🔥 The list of aliases/servers are: \n")
 
         for item in all_aliases:
             aliases = [str(alias) for alias in item['aliases']]
-            automation.log("Aliases: {aliases}, \tSERVER: {server}"
+            automation.log("✨ Aliases: {aliases}, \tSERVER: {server}"
                            .format(server=item['server'], aliases=", ".join(aliases)))
 
         sys.exit(0)
@@ -151,7 +155,7 @@ if __name__ == '__main__':
 
             items = other_args[1].split(':')
         except:
-            automation.log("No alias was passed, please pass an alias. "
+            automation.log("🧊 No alias was passed, please pass an alias. "
                            "Format \"./server_automation.py pf local_port alias_name:port\"")
             sys.exit(1)
 
@@ -159,6 +163,10 @@ if __name__ == '__main__':
 
         alias = items[0]
         destination_port = items[1]
+
+        # Set the verification code if its passed
+        if other_args[2]:
+            automation.VERIFICATION_CODE = other_args[2]
 
         # Handle all the options
         automation.handle_port_forward_options(short_options, long_options)
@@ -179,7 +187,7 @@ if __name__ == '__main__':
         signal.signal(signal.SIGWINCH, automation.sigwinch_pass_through)
         automation.controller.interact()
     else:
-        automation.log('Unimplemented command {command} {accepted_commands}'.format(
+        automation.log('🧊 Unimplemented command {command} {accepted_commands}'.format(
             command=first_arg,
             accepted_commands=str(automation.ACCEPTED_COMMANDS.keys())))
 

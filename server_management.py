@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # Try to import the pyyaml, pexpect module
+import signal
+
 try:
     import fcntl
     import os
@@ -28,9 +30,10 @@ class ServerManagement:
     DELIMITER = "<------->"
     ARGS_LONG_PREFIX = "--"
     ARGS_SHORT_PREFIX = "-"
-    APP_TIMEOUT = 8
+    APP_TIMEOUT = 10
     VERIFICATION_CODE = None
-    VERIFICATION_CODE_MESSAGE = 'Verification code'
+    VERIFICATION_CODE_TEXT = 'Verification code'
+    PASSWORD_TEXT = 'assword:'
     COMMAND_TO_RUN = None
     FINAL_SERVER_DETAILS = None
 
@@ -41,7 +44,7 @@ class ServerManagement:
 
     # Config file
     # CONFIG_FILE = os.path.dirname(os.path.realpath(__file__)) + '/config.yaml'
-    CONFIG_FILE = '/home/mnderitu/.config/server_automation/config.yaml'
+    CONFIG_FILE = '/Users/maxwellnderitu/Programs/server-automation/config.yaml'
 
     # Accepted commands
     ACCEPTED_COMMANDS = {
@@ -97,34 +100,47 @@ class ServerManagement:
         else:
             print(result, other)
 
-    def expected(self, expected_string):
+    def expected(self, expected_string, timeout=APP_TIMEOUT):
         """Function to handle the expected output"""
 
         # Check if the string passed is the expected string
         try:
-            self.controller.expect(expected_string, timeout=self.APP_TIMEOUT)
+            index = self.controller.expect(expected_string, timeout=timeout)
+
+            if isinstance(expected_string, list):
+                return expected_string[index]
+            else:
+                return expected_string
 
         except pexpect.EOF:
-            self.log("EOF, Failed to match expected string: ", expected_string)
-            self.log("\t----> Expected: ", expected_string)
-            self.log("\t----> Received: ", self.controller.before)
-            self.log("\t----> Error: ", self.controller.after)
-            self.controller.kill(1)
+            self.log("🧊 EOF, Failed to match expected string: ", expected_string)
+            self.log("\t🧊 Expected: ", expected_string)
+            self.log("\t🧊 Received: ", self.controller.before)
+            self.log("\t🧊 Error: ", self.controller.after)
+
+            signal.signal(signal.SIGWINCH, self.sigwinch_pass_through)
+            self.controller.interact()
             sys.exit(1)
         except pexpect.TIMEOUT:
-            self.log("TIMEOUT, Failed to match expected string: ", expected_string)
-            self.log("\t----> Expected: ", expected_string)
-            self.log("\t----> Received: ", self.controller.before)
-            self.log("\t----> Error: ", self.controller.after)
+            self.log("🧊 TIMEOUT, Failed to match expected string: ", expected_string)
+            self.log("\t🧊 Expected: ", expected_string)
+            self.log("\t🧊 Received: ", self.controller.before)
+            self.log("\t🧊 Error: ", self.controller.after)
+
+            signal.signal(signal.SIGWINCH, self.sigwinch_pass_through)
+            self.controller.interact()
             sys.exit(1)
         except:
-            self.log("Failed to match expected string: ", expected_string)
-            self.log("\t----> Expected: ", expected_string)
-            self.log("\t----> Received: ", self.controller.before)
-            self.log("\t----> Error: ", self.controller.after)
+            self.log("🧊 Failed to match expected string: ", expected_string)
+            self.log("\t🧊 Expected: ", expected_string)
+            self.log("\t🧊 Received: ", self.controller.before)
+            self.log("\t🧊 Error: ", self.controller.after)
+
+            signal.signal(signal.SIGWINCH, self.sigwinch_pass_through)
+            self.controller.interact()
             sys.exit(1)
 
-    def ssh_log_in(self, server_ip, username, password, port=22, require_verification_code=False):
+    def ssh_log_in(self, server_ip, username, password, port=22, timeout=APP_TIMEOUT, require_verification_code=False):
         """
         This function logs in into a server with the arguments passed
         """
@@ -133,7 +149,7 @@ class ServerManagement:
         command = 'ssh %s@%s -p%d' % (username, server_ip, port)
 
         # Log
-        self.log("----> Logging in with the command: %s" % command)
+        self.log("🥁 Logging in with the command: %s" % command)
 
         # Run the command
         if self.controller is None:
@@ -141,24 +157,47 @@ class ServerManagement:
         else:
             self.controller.sendline(command)
 
+        accepted_login_strings = ['%s@' % username, '%s:' % username, 'bash',
+                                  'successful login', 'Last login', 'Welcome to lshell']
+
         # Expect the password
-        self.expected('assword:')
+        input_received = self.expected([self.PASSWORD_TEXT, self.VERIFICATION_CODE_TEXT], timeout)
 
-        # Insert the password
-        self.controller.sendline(password)
+        if input_received == self.PASSWORD_TEXT:
+            self.log("🙈 Providing password")
 
-        # Check if the server requires a verification code
-        if require_verification_code:
-            self.expected(self.VERIFICATION_CODE_MESSAGE)
+            self.controller.sendline(password)
 
-            self.log("Providing verification code: %s" % self.VERIFICATION_CODE)
+            if require_verification_code:
+                self.expected(self.VERIFICATION_CODE_TEXT, timeout)
+
+                self.log("🙈 Providing verification code: %s" % self.VERIFICATION_CODE)
+
+                self.controller.sendline(self.VERIFICATION_CODE)
+
+            # Expect the username and server display name
+            self.expected(['%s@' % username, '%s:' % username, 'bash'], timeout)
+
+            self.log("🔥 Successfully logged into the server: " + server_ip + "\n")
+
+        elif input_received == self.VERIFICATION_CODE_TEXT:
+            self.log("🙈 Providing verification code: %s" % self.VERIFICATION_CODE)
 
             self.controller.sendline(self.VERIFICATION_CODE)
 
-        # Expect the username and server display name
-        self.expected(['%s@' % username, '%s:' % username, 'bash'])
+            self.expected(self.PASSWORD_TEXT, timeout)
 
-        self.log("<---- Successfully logged into the server: " + server_ip + "\n")
+            self.log("🙈 Providing password")
+
+            self.controller.sendline(password)
+
+            # Expect the username and server display name
+            self.expected(accepted_login_strings, timeout)
+
+            self.log("🔥 Successfully logged into the server: " + server_ip + "\n")
+
+        else:
+            self.log("🔥 Successfully logged into the server: " + server_ip + "\n")
 
     def ssh_port_forward(self, server_ip, username, password, port, local_port,
                          destination_port, require_verification_code):
@@ -170,7 +209,7 @@ class ServerManagement:
         command = f"ssh -p{port} -L localhost:{local_port}:localhost:{destination_port} {username}@{server_ip}"
 
         # Log
-        self.log("----> Port forwarding with the command: %s" % command)
+        self.log("🥁 Port forwarding with the command: %s" % command)
 
         # Run the command
         if self.controller is None:
@@ -186,20 +225,20 @@ class ServerManagement:
 
         # Check if the server requires a verification code
         if require_verification_code:
-            self.expected(self.VERIFICATION_CODE_MESSAGE)
+            self.expected(self.VERIFICATION_CODE_TEXT)
 
-            self.log("Providing verification code: %s" % self.VERIFICATION_CODE)
+            self.log("🙈 Providing verification code: %s" % self.VERIFICATION_CODE)
 
             self.controller.sendline(self.VERIFICATION_CODE)
 
         # Expect the username and server display name
         self.expected(['%s@' % username, 'bash'])
 
-        self.log("<---- Successfully port forwarded to the server: " + server_ip + "\n")
+        self.log("🔥 Successfully port forwarded to the server: " + server_ip + "\n")
 
     # Function to run command on the server
     def run_command(self, command, expected_string=".*"):
-        self.log("\nRunning the command %s" % command)
+        self.log("🥁 Running the command %s" % command)
 
         self.controller.sendline(command)
 
@@ -230,7 +269,7 @@ class ServerManagement:
                 break
 
         if found_alias is False:
-            self.log('No alias with the name: \'{}\' does not exist. Get the available aliases using: '
+            self.log('🧊 No alias with the name: \'{}\' does not exist. Get the available aliases using: '
                      ' `./server_automation.py list`'.format(server_alias))
 
             sys.exit(1)
@@ -257,14 +296,20 @@ class ServerManagement:
             require_verification_code = False
 
         if require_verification_code and self.VERIFICATION_CODE is None:
-            self.log("Please pass a verification code for server: %s" % server_details['server'])
+            self.log("🧊 Please pass a verification code for server: %s" % server_details['server'])
             sys.exit(1)
+
+        if 'timeout' in server_details:
+            timeout = server_details['timeout']
+        else:
+            timeout = self.APP_TIMEOUT
 
         # Connect to the server
         self.ssh_log_in(server_details['server'],
                         server_details['username'],
                         server_details['password'],
                         server_details['port'],
+                        timeout,
                         require_verification_code)
 
     def server_port_forward(self, server_details, local_port, destination_port):
@@ -349,10 +394,10 @@ class ServerManagement:
                 if len(option_value) < 1:
                     raise ValueError()
             except ValueError:
-                self.log('Undefined value for option: {prefix}{option},'
+                self.log('🧊 Undefined value for option: {prefix}{option},'
                          ' Use the format: {prefix}{option}=value'
                          .format(prefix=self.ARGS_LONG_PREFIX, option=option))
                 sys.exit(1)
             except AssertionError:
-                self.log('Unknown option: {}{}'.format(self.ARGS_LONG_PREFIX, option))
+                self.log('🧊 Unknown option: {}{}'.format(self.ARGS_LONG_PREFIX, option))
                 sys.exit(1)

@@ -2,3 +2,4 @@
 config.hjson
 config.yaml
 __pycache__/
+.vscode/
